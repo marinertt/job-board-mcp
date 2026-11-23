@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "job-board-mcp"
+version = "0.1.0"
+description = "Portable MCP server and client for job discovery, availability verification and audit"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["mcp>=1.29,<2", "httpx>=0.28,<1", "pydantic>=2.10,<3"]
+
+[project.scripts]
+job-board-server = "job_board_mcp.server:main"
+job-board-client = "job_board_mcp.client:main"
+
+[tool.setuptools.packages.find]
+include = ["job_board_mcp*"]
+
+[tool.setuptools.package-data]
+job_board_mcp = ["data/*.json", "data/*.md"]

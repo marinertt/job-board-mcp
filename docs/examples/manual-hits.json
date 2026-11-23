@@ -1,0 +1,14 @@
+[
+  {
+    "company": "Example Employer",
+    "title": "Senior Data Engineer",
+    "location": "Albuquerque, NM",
+    "url": "https://careers.example.invalid/jobs/data-engineer-123",
+    "source_id": "manual",
+    "description": "Example only: Python, SQL and data pipelines. This is not a live posting.",
+    "posting_date": "Unknown",
+    "posting_date_note": "Example source said '2 days ago'; no exact date established.",
+    "work_arrangement": "Unknown",
+    "source_job_id": "data-engineer-123"
+  }
+]

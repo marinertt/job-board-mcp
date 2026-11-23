@@ -1,0 +1,10 @@
+[
+  {"id":"greenhouse_example","name":"Example Greenhouse employer board","adapter":"greenhouse","board":"replace_with_board_token","company":"Replace with employer name","enabled":false,"notes":"Configure a real employer board token and enable it."},
+  {"id":"lever_example","name":"Example Lever employer board","adapter":"lever","board":"replace_with_site_name","company":"Replace with employer name","enabled":false,"notes":"Configure a real employer site name and enable it."},
+  {"id":"linkedin","name":"LinkedIn Jobs","adapter":"manual","url":"https://www.linkedin.com/jobs/","notes":"Primary discovery via your permitted search/browser/provider; import specific URLs. No LinkedIn scraping is implemented."},
+  {"id":"builtin","name":"Built In","adapter":"manual","url":"https://builtin.com/jobs","notes":"Import specific posting URLs, never search/category pages."},
+  {"id":"indeed","name":"Indeed","adapter":"manual","url":"https://www.indeed.com/","notes":"Use permitted access and import specific postings."},
+  {"id":"usajobs","name":"USAJOBS","adapter":"manual","url":"https://www.usajobs.gov/","notes":"Future official API adapter requires your own API credentials; exact closure/deadline gate still applies."},
+  {"id":"development","name":"Development agencies and NGOs","adapter":"manual","notes":"UN agencies, World Bank/IFC, IMF, IDB, OECD, ReliefWeb, Devex, Impactpool, GlobalJobs, InterAction, NGO employers."},
+  {"id":"other_boards","name":"Other discovery sources","adapter":"manual","notes":"Dice, Wellfound, ZipRecruiter, Google job results, Canadian Job Bank, Workopolis, government, unions, apprenticeships and direct employers."}
+]

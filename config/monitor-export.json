@@ -1,0 +1,16 @@
+{
+  "format": "job-board-monitor-portable-export",
+  "version": 1,
+  "exported_at": "2026-11-23",
+  "title": "Morning Job Board Check",
+  "schedule": "BEGIN:VEVENT\nDTSTART:20260914T080000\nRRULE:FREQ=DAILY;BYHOUR=8\nEND:VEVENT",
+  "timezone": "America/New_York",
+  "enabled_at_export": true,
+  "prompt_file": "prompts/monitor.md",
+  "profile_file": "config/profile.example.json",
+  "notes": [
+    "Original automation was not modified.",
+    "Private spreadsheet URL omitted; use an explicitly configured destination.",
+    "This metadata does not create or schedule a new task."
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "portable-job-monitor",
+  "timezone": "America/New_York",
+  "discovery_days": 3,
+  "fresh_verification_hours": 24,
+  "regions": ["Canada & International", "NY NJ PA", "DC VA MD", "Fully Remote", "Albuquerque", "Career Transition Jobs"],
+  "retired_regions": ["Tucson Phoenix"],
+  "excluded_companies": ["Capital One", "Navy Federal Credit Union"],
+  "excluded_sectors": ["healthcare", "healthtech", "medtech", "pharmaceutical", "clinical research", "health insurance"],
+  "preferred_technologies": ["Python", "SQL", "PySpark", "Spark", "AWS", "Glue", "Databricks", "Unity Catalog", "migration", "GenAI"],
+  "title_queries": ["senior data engineer", "lead data engineer", "staff data engineer", "data platform", "analytics engineer", "Databricks", "AWS Glue", "ML AI platform", "AI applications", "geospatial", "governance digital transformation"],
+  "locations": ["Canada", "New Jersey eastern Pennsylvania southern New York", "Washington DC Northern Virginia Maryland Winchester", "United States remote", "Albuquerque Rio Rancho New Mexico"],
+  "transition_queries": ["electrical apprenticeship", "building automation controls technician", "industrial facilities maintenance PLC", "rail transit telecom network technical support", "data center technician paid training"],
+  "transition_pay_floors": {"DC VA MD": 70000, "NY NJ PA": 70000, "Winchester": 55000, "Albuquerque": 55000},
+  "constraints": ["Do not promote explicitly military/DoD/DoW-serving positions", "Do not promote roles explicitly requiring active Secret/TS/TS-SCI/polygraph", "Do not promote regular long-distance driving", "Country authorization must be established, not assumed", "Flag recurring travel, pet policy, schedule, physical and transport requirements"]
+}
