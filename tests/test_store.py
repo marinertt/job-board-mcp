@@ -7,17 +7,40 @@ import tempfile
 import unittest
 
 from job_board_mcp.models import JobFilters, JobHit, Verification
-from job_board_mcp.policy import RAW_HEADERS, REGIONAL_HEADERS, CAREER_HEADERS, build_queries, load_profile
+from job_board_mcp.policy import (
+    RAW_HEADERS,
+    REGIONAL_HEADERS,
+    CAREER_HEADERS,
+    assess_exclusions,
+    build_queries,
+    load_profile,
+    location_matches_region,
+)
 from job_board_mcp.store import JobStore, canonical_url
 
 
 class StoreTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
+        self.previous_profile = os.environ.get("JOB_MONITOR_PROFILE")
+        self.profile_path = Path(self.tmp.name) / "profile.json"
+        profile = load_profile()
+        profile["excluded_companies"] = ["Excluded Demo Company"]
+        profile["excluded_position_rules"] = [{
+            "fields": ["description"],
+            "pattern": r"restricted demo contract",
+            "reason": "Configured demo rule",
+        }]
+        self.profile_path.write_text(json.dumps(profile), encoding="utf-8")
+        os.environ["JOB_MONITOR_PROFILE"] = str(self.profile_path)
         self.store = JobStore(str(Path(self.tmp.name)/"jobs.db"))
         self.url = "https://job-boards.greenhouse.io/example/jobs/12345"
 
     def tearDown(self):
+        if self.previous_profile is None:
+            os.environ.pop("JOB_MONITOR_PROFILE", None)
+        else:
+            os.environ["JOB_MONITOR_PROFILE"] = self.previous_profile
         self.tmp.cleanup()
 
     def hit(self, **updates):
@@ -43,10 +66,17 @@ class StoreTests(unittest.TestCase):
         return self.store.import_csv(self.write_csv("regional.csv",REGIONAL_HEADERS,row),"Fully Remote")
 
     def test_raw_capture_includes_excluded_and_weak(self):
-        self.seed(company="Capital One")
+        self.seed(company="Excluded Demo Company")
         self.seed(url="https://jobs.lever.co/example/11111111-1111-1111-1111-111111111111",title="Unrelated role")
         self.assertEqual(len(self.store.export_rows()),2)
         self.assertEqual(self.store.get_job(self.url)["disposition"],"Excluded")
+
+    def test_position_exclusions_are_profile_configured(self):
+        reasons = assess_exclusions(
+            {"description": "Restricted demo contract"},
+            load_profile(),
+        )
+        self.assertEqual(reasons, ["Configured demo rule"])
 
     def test_generic_pages_rejected(self):
         result=self.store.upsert_hits([self.hit(url="https://example.com/careers"),self.hit(url="https://jobs.lever.co/example")])
@@ -118,11 +148,11 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.store.promote(key,"Fully Remote","strong")
 
     def test_exclusion_location_and_retired_region_gate(self):
-        key=self.seed(company="Capital One");self.verify(key)
+        key=self.seed(company="Excluded Demo Company");self.verify(key)
         with self.assertRaises(ValueError):self.store.promote(key,"Fully Remote")
         other=self.seed(company="Example",url=self.url+"9",location="Canada");self.verify(other)
         with self.assertRaises(ValueError):self.store.promote(other,"Fully Remote")
-        with self.assertRaises(ValueError):self.store.promote(other,"Tucson Phoenix")
+        with self.assertRaises(ValueError):self.store.promote(other,"Unconfigured Region")
 
     def test_raw_first_import_then_curated_preserves_status(self):
         raw=dict.fromkeys(RAW_HEADERS,"")
@@ -150,11 +180,26 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(list(self.store.export_rows()[0]),RAW_HEADERS)
         self.assertEqual(list(self.store.export_rows("Fully Remote")[0]),REGIONAL_HEADERS)
 
-    def test_discovery_three_calendar_days_and_no_arizona(self):
+    def test_discovery_uses_the_configured_profile(self):
         q=build_queries(load_profile(),"2026-11-23")
         self.assertEqual(q[0]["since"],"2026-11-20")
-        self.assertNotIn("Tucson",json.dumps(q))
-        self.assertIn("Albuquerque",json.dumps(q))
+        data_locations = {item["location"] for item in q if item["stream"] == "data"}
+        self.assertEqual(data_locations, set(load_profile()["locations"]))
+
+    def test_region_matching_uses_configured_patterns(self):
+        profile = load_profile()
+        job = {"location": "Sample City, ZZ", "work_arrangement": "On-site"}
+        self.assertTrue(location_matches_region(job, "Example Region", profile))
+        self.assertTrue(location_matches_region(job, "Career Transition Jobs", profile))
+        self.assertFalse(location_matches_region(job, "Fully Remote", profile))
+
+    def test_transition_discovery_locations_are_configurable(self):
+        profile=load_profile()
+        profile["transition_locations"]=["Configured transition region"]
+        q=build_queries(profile,"2026-11-23")
+        transition=[item for item in q if item["stream"]=="career_transition"]
+        self.assertTrue(transition)
+        self.assertEqual({item["location"] for item in transition},{"Configured transition region"})
 
 
 if __name__ == "__main__":

@@ -2,7 +2,13 @@
 
 An exportable job-monitor workflow with an MCP server, a small Python MCP client, and a local SQLite audit. It captures broadly, verifies availability separately, and keeps application decisions separate from whether an employer is still hiring.
 
-This is a **working starting point, not a universal job-board scraper**. Automated discovery supports configured Greenhouse and Lever employer boards. LinkedIn, Built In, Indeed, USAJOBS, international-development sites and other catalog entries remain discovery/manual-import sources until a permitted adapter is implemented. An inaccessible page is not an open job.
+This is a **working starting point, not a universal job-board scraper**.
+Automated discovery supports configured Greenhouse and Lever employer boards.
+Each enabled supported source gets a source-specific search tool, named by its
+optional `tool_name` setting or derived from its source ID. LinkedIn, Built In,
+Indeed, USAJOBS, international-development sites and other catalog entries
+remain discovery/manual-import sources until a permitted adapter is
+implemented. An inaccessible page is not an open job.
 
 ## The MCP pieces
 
@@ -10,86 +16,116 @@ This is a **working starting point, not a universal job-board scraper**. Automat
 | --- | --- | --- |
 | Backing source | The external job board or employer API | A Greenhouse employer board |
 | Resource | Read-only context exposed by the server | `jobboards://catalog`, `jobs://audit` |
-| Tool | A typed operation the client can call | `search_jobs`, `filter_jobs`, `check_posting` |
+| Tool | A typed operation the client can call | `search_jobs`, `search_<source-id>`, `filter_jobs` |
 | Prompt | A reusable instruction template for an assistant | `run_job_check`, `assess_job` |
-| Client | A program that discovers and invokes those capabilities | `python -m job_board_mcp.client` |
+| Client | An importable async class for connecting to an MCP server | `MCPClient` |
 
 A job board is a backing data source; the MCP **resource** is the catalog or snapshot the server exposes from it. Filters are tool arguments over captured data. Prompts guide the workflow but do not search, schedule themselves, or call a language model on their own.
 
-## Quick start
+Each enabled Greenhouse/Lever source is exposed as a dedicated search tool.
+Set its `tool_name` in `config/sources.example.json`, or let the server derive
+one from the source ID. Disabled and manual-only entries do not get search
+tools. The generic `search_jobs(source_id, ...)` remains available.
 
-Requires Python 3.11+. The implementation targets the official MCP SDK's v1 maintenance line, `mcp>=1.29,<2`; it does not claim to target the latest major SDK. No LLM API key is needed for this CLI.
+## Python API
+
+Requires Python 3.11+. The implementation targets the official MCP SDK's v1
+maintenance line, `mcp>=1.29,<2`; it does not claim to target the latest major
+SDK. The client and server are importable classes, not executable scripts or
+console commands.
 
 ```bash
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install -e .
-
-python -m job_board_mcp.client discover
-python -m job_board_mcp.client sources
-python -m job_board_mcp.client resource jobboards://catalog
-python -m job_board_mcp.client prompt run_job_check
 python -m unittest discover -s tests -v
 ```
 
-The client starts the server over stdio, performs the MCP handshake, and uses actual MCP protocol calls. It is not a shortcut that imports and calls server functions. An LLM host such as an MCP-enabled desktop assistant can connect to the same server instead.
+`MCPServer` owns the configured FastMCP instance. An owning application can
+embed that instance or start its transport programmatically:
 
-Optional global arguments go **before** the command: `--db PATH`, `--profile PATH`, and `--sources PATH`. Without overrides the packaged example profile/catalog is loaded; employer board placeholders are disabled until you configure them.
+```python
+from job_board_mcp.server import MCPServer
 
-### Run a search
-
-Copy `config/sources.example.json` to a private file, fill in a real Greenhouse board token or Lever site name, and set that employer entry's `enabled` field to `true`. Then use `--sources /path/to/your/sources.json sources` to inspect it. Replace `SOURCE_ID` below with the enabled identifier:
-
-```bash
-python -m job_board_mcp.client --sources /path/to/your/sources.json search SOURCE_ID --query "data engineer" --location "United States"
-python -m job_board_mcp.client jobs --query "data engineer"
-python -m job_board_mcp.client queue
+monitor = MCPServer(
+    database=".local/jobs.sqlite3",
+    profile_path="config/profile.example.json",
+    sources_path="config/sources.example.json",
+)
+monitor.run(transport="stdio")
 ```
 
-The adapter captures every specific posting it fetched **before** returning a filtered view. That is intentional: weak-fit and excluded postings still belong in the raw audit. Search query and location arguments do not turn a public employer feed into a global search engine.
+`MCPClient` manages an async stdio session with a server process configured by
+the owning application:
 
-### Verify, then promote
+```python
+from mcp import StdioServerParameters
+from job_board_mcp.client import MCPClient
 
-Use a `unique_key` returned by `jobs`; quote URL keys in your shell:
-
-```bash
-python -m job_board_mcp.client verify 'SPECIFIC_JOB_URL'
-python -m job_board_mcp.client promote 'SPECIFIC_JOB_URL' --region 'Fully Remote' --fit possible
-python -m job_board_mcp.client export --view raw --output raw-search-hits.csv
+parameters = StdioServerParameters(command="your-host-configured-server")
+async with MCPClient(parameters) as client:
+    tools = await client.list_tools()
+    sources = await client.call_tool("list_sources")
 ```
 
-Promotion requires fresh, job-specific Open evidence and must pass configured exclusions. `Open`, `Closed`, and `Unclear` describe availability. `new`, `applied`, `no`, `interviewing`, and `phone screen` describe the user's application decision. Discovery and availability checks cannot overwrite the user's application status or `my_notes`.
+The client performs the MCP handshake and invokes protocol operations; it does
+not call server functions directly. Configure database/profile/source paths
+through `MCPServer` arguments or the `JOB_MONITOR_DB`, `JOB_MONITOR_PROFILE`,
+and `JOB_MONITOR_SOURCES` environment variables. Without overrides, packaged
+examples are loaded and employer-board placeholders remain disabled.
 
-### Import external discovery
+Search adapters audit every specific posting they fetch before returning a
+filtered view. Search query/location arguments do not turn a public employer
+feed into a global search engine. Manual hits start unverified; importing a
+posting, finding its text, or supplying an Apply-looking link does not prove
+applications are open.
+
+## Interactive demo GUI
+
+Run the local GUI with:
 
 ```bash
-python -m job_board_mcp.client import-hits docs/examples/manual-hits.json
-python -m job_board_mcp.client jobs --query "Example"
+python -m job_board_mcp.gui
 ```
 
-Manual hits start unverified. Importing a posting, finding its text, or supplying an Apply-looking link is not proof that applications are open. The example uses reserved `.invalid` URLs so it never pretends to be a real opportunity.
+It binds to loopback and opens a browser. The left panel edits a private profile
+and source configuration; **Save & reconnect** writes copies under
+`.local/job-board-demo/` and restarts the MCP subprocess. The right workbench
+shows the client's MCP request, the server's actual protocol response, and
+results tabs. It can read resources, render prompts, run enabled source tools,
+verify postings, and request promotion through the existing gates.
+
+Use **Load demo fixtures** to populate the raw audit with clearly labeled
+`.invalid` sample URLs. They are never real jobs and remain `Unclear`; the GUI
+does not bypass availability or promotion policy. Live source searches require
+an explicitly enabled and configured Greenhouse/Lever board. The GUI does not
+edit spreadsheets or submit applications.
+
+### Add the demo to the SPARKTACUS site
+
+The existing company site is `marinertt.github.io`; the workbench belongs at
+`/job-monitor/` in that site, not as a separate Pages deployment. Build its
+static page directly into a local checkout of the site:
+
+```bash
+python scripts/build_pages.py --output /path/to/marinertt.github.io/job-monitor
+```
+
+Then run the site checks and publish changes from the website repository. The
+static page labels client/server actions as simulated: GitHub Pages cannot run
+the Python process or MCP stdio connection, so searches, availability checks,
+promotions, and workbook writes are disabled. Configuration and synthetic
+`.invalid` sample rows stay in each visitor's browser storage. Use the local
+GUI above for actual MCP operations.
 
 ## Connect an MCP host
 
-Configure the host to launch the installed server with an absolute Python path. Adapt this common JSON shape to your host's documented configuration format:
-
-```json
-{
-  "mcpServers": {
-    "job-board-monitor": {
-      "command": "/ABSOLUTE/PATH/TO/.venv/bin/python",
-      "args": ["-m", "job_board_mcp.server"],
-      "env": {
-        "JOB_MONITOR_DB": "/ABSOLUTE/PRIVATE/PATH/jobs.sqlite3",
-        "JOB_MONITOR_PROFILE": "/ABSOLUTE/PATH/TO/config/profile.example.json",
-        "JOB_MONITOR_SOURCES": "/ABSOLUTE/PRIVATE/PATH/sources.json"
-      }
-    }
-  }
-}
-```
-
-The sources path above should contain your configured copy of `config/sources.example.json`; the shipped employer entries are disabled placeholders. The default stdio transport avoids opening a network listener. Optional Streamable HTTP is for trusted local use; do not expose it publicly without an authenticated deployment design.
+There is no standalone launcher or host-specific MCP configuration in this
+package. Integrate `MCPServer.server` into an in-process MCP host, or call
+`MCPServer.run()` from an application that owns the server lifecycle. The
+default stdio transport avoids opening a network listener. Optional
+Streamable HTTP is for trusted local use; do not expose it publicly without an
+authenticated deployment design.
 
 ## Monitor rules preserved
 
@@ -99,10 +135,10 @@ The sources path above should contain your configured copy of `config/sources.ex
 - Keep raw capture separate from filtering, fit assessment and curated promotion.
 - Preserve application statuses and personal notes across checks and imports.
 - Recheck promoted/recent entries each run and rotate older raw-only Open entries weekly.
-- Use the active regions Canada & International, NY NJ PA, DC VA MD, Fully Remote, and Albuquerque; retain Career Transition Jobs separately. Arizona is retired from new discovery.
-- Keep unknown pay, authorization, clearance, travel, scheduling and small-dog feasibility explicit rather than inventing favorable answers.
+- Use only the regions and location rules defined by the active profile; keep career-transition scope configurable.
+- Keep unknown pay, authorization, clearance, travel, scheduling, and other personal constraints explicit rather than inventing favorable answers.
 
-The portable monitor instructions are in `prompts/monitor.md`. A private exact automation export, if included in the delivered bundle, lives in ignored `.local/` and must not be published. This export does not change or cancel the original monitor.
+The portable monitor instructions are in `prompts/monitor.md`; the MCP `run_job_check` prompt includes the active profile so its tabs, regions, search scope, and constraints can be reconfigured without editing the instructions. Source-specific details remain in the configured source catalog. A private exact automation export, if included in the delivered bundle, lives in ignored `.local/` and must not be published. This export does not change or cancel the original monitor.
 
 ## What is—and is not—included
 

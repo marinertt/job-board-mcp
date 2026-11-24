@@ -22,25 +22,20 @@ def load_profile(path: str | None = None) -> dict:
 
 def assess_exclusions(job: dict, profile: dict) -> list[str]:
     company = job.get("company", "").casefold().strip()
-    text = " ".join(str(job.get(k, "")) for k in ("title", "description", "notes", "sector")).casefold()
     reasons = []
     for excluded in profile.get("excluded_companies", []):
         if excluded.casefold() in company:
             reasons.append(f"Excluded company: {excluded}")
-    # Only explicit position/industry evidence, not an employer's unrelated portfolio.
     for sector in profile.get("excluded_sectors", []):
         if re.search(rf"\b{re.escape(sector.casefold())}\b", str(job.get("sector", "")).casefold()):
             reasons.append(f"Excluded sector: {sector}")
-    if re.search(r"(?:healthcare|healthtech|medtech|pharmaceutical|clinical research) (?:company|provider|customers|clients|industry)", text):
-        reasons.append("Position explicitly serves an excluded healthcare sector")
-    if re.search(r"(?:support(?:s|ing)?|serv(?:e|es|ing)|client[: ]+|customer[: ]+)\s+(?:the\s+)?(?:dod|dow|department of defense|department of war|u\.?s\.? (?:army|navy|air force|marine corps)|military installation)\b", text):
-        reasons.append("Position explicitly serves DoD/DoW or a military organization")
-    if company in {"department of defense", "department of war", "u.s. army", "u.s. navy", "u.s. air force", "united states army", "united states navy", "united states air force"}:
-        reasons.append("Direct military department employer")
-    if re.search(r"(?:require\w*|must (?:hold|have|possess))[^.\n]{0,70}(?:active|current)[^.\n]{0,40}(?:secret|ts/sci|ts sci|top secret|polygraph)", text) or re.search(r"(?:active|current)\s+(?:secret|ts/sci|top secret)[^.\n]{0,35}(?:required|mandatory)", text):
-        reasons.append("Explicitly required active security clearance above Public Trust")
-    if re.search(r"(?:regular|frequent|daily)[^.\n]{0,30}long[- ]distance driving|long[- ]distance driving[^.\n]{0,30}(?:required|regular)", text):
-        reasons.append("Regular long-distance driving")
+    for rule in profile.get("excluded_position_rules", []):
+        if not isinstance(rule, dict) or not rule.get("pattern"):
+            continue
+        fields = rule.get("fields", ("title", "description", "notes", "sector"))
+        text = " ".join(str(job.get(field, "")) for field in fields)
+        if re.search(rule["pattern"], text, re.IGNORECASE):
+            reasons.append(rule.get("reason", rule.get("name", "Excluded by position rule")))
     if job.get("authorization_eligible") is False:
         reasons.append("Known disqualifying work authorization")
     return reasons
@@ -53,28 +48,39 @@ def build_queries(profile: dict, as_of: str | None = None) -> list[dict]:
     for location in profile.get("locations", []):
         for title in profile.get("title_queries", []):
             queries.append({"stream": "data", "location": location, "query": f'{title} {location} after:{since.isoformat()}', "since": since.isoformat(), "until": today.isoformat()})
+    transition_locations = profile.get("transition_locations", [])
     for title in profile.get("transition_queries", []):
-        for location in ("DC Virginia nearby Maryland Winchester", "NJ eastern PA southern NY", "Albuquerque Rio Rancho NM"):
+        for location in transition_locations:
             queries.append({"stream": "career_transition", "location": location, "query": f'{title} {location} after:{since.isoformat()}', "since": since.isoformat(), "until": today.isoformat()})
     queries.append({"stream": "older_missed", "location": "all configured regions", "query": "Search older missed live postings; do not infer posting dates from updated_at or snippets.", "since": "unbounded", "until": today.isoformat()})
     return queries
 
 
-def location_matches_region(job: dict, region: str) -> bool:
-    loc = str(job.get("location", "")).casefold()
-    arrangement = str(job.get("work_arrangement", "")).casefold()
-    if region == "Career Transition Jobs":
-        return any(location_matches_region(job, x) for x in ("NY NJ PA", "DC VA MD", "Albuquerque"))
-    if region == "Fully Remote":
-        return bool(re.search(r"\b(?:united states|usa|u\.s\.|us[- ]remote|remote[- ]us)\b", loc + " " + arrangement)) and "remote" in loc + " " + arrangement and not any(x in arrangement for x in ("hybrid", "office attendance", "onsite required"))
-    if region == "Albuquerque":
-        return bool(re.search(r"albuquerque|rio rancho|bernalillo|los ranchos", loc))
-    if region == "DC VA MD":
-        return bool(re.search(r"washington,? d\.?c|district of columbia|arlington|alexandria|fairfax|falls church|reston|herndon|ashburn|sterling|winchester|rockville|bethesda|silver spring|college park", loc))
-    if region == "NY NJ PA":
-        if re.search(r"new york city|nyc|manhattan|brooklyn", loc) and not re.search(r"hybrid|remote", arrangement):
-            return False
-        return bool(re.search(r"new jersey|\bnj\b|newark|jersey city|princeton|philadelphia|allentown|bethlehem|easton|new york city|nyc|manhattan|brooklyn|westchester|white plains", loc))
-    if region == "Canada & International":
-        return bool(re.search(r"canada|ontario|toronto|vancouver|montreal|quebec|ottawa|london|united kingdom|germany|france|spain|italy|geneva|switzerland|nairobi|kenya|south africa|uganda|bulgaria|denmark", loc))
-    return False
+def location_matches_region(job: dict, region: str, profile: dict | None = None) -> bool:
+    if profile is None:
+        profile = load_profile()
+    transition_region = profile.get("career_transition_region")
+    if region == transition_region:
+        return any(
+            location_matches_region(job, candidate, profile)
+            for candidate in profile.get("career_transition_regions", [])
+        )
+
+    patterns = profile.get("region_location_patterns", {})
+    if not isinstance(patterns, dict):
+        return False
+    rules = patterns.get(region)
+    if not isinstance(rules, dict):
+        return False
+    location = " ".join(
+        str(job.get(field, ""))
+        for field in ("location", "work_arrangement")
+    )
+    include_any = rules.get("include_any", [])
+    require_all = rules.get("require_all", [])
+    exclude_any = rules.get("exclude_any", [])
+    return (
+        (not include_any or any(re.search(pattern, location, re.IGNORECASE) for pattern in include_any))
+        and all(re.search(pattern, location, re.IGNORECASE) for pattern in require_all)
+        and not any(re.search(pattern, location, re.IGNORECASE) for pattern in exclude_any)
+    )

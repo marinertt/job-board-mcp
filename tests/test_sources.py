@@ -9,7 +9,7 @@ import httpx
 
 from job_board_mcp.sources import (
     SourceUnavailable, load_sources, safe_get, search_source, validate_public_dns,
-    validate_url_shape,
+    source_tool_name, validate_url_shape,
 )
 
 
@@ -119,6 +119,15 @@ class SourceTests(unittest.IsolatedAsyncioTestCase):
 
     def test_default_catalog_has_manual_sources(self):
         self.assertTrue(any(x.get("adapter") == "manual" for x in load_sources()))
+
+    def test_source_tool_names_are_configurable_and_validated(self):
+        self.assertEqual(source_tool_name({"id": "my-board"}), "search_my-board")
+        self.assertEqual(
+            source_tool_name({"id": "my-board", "tool_name": "search_custom"}),
+            "search_custom",
+        )
+        with self.assertRaisesRegex(ValueError, "tool_name"):
+            source_tool_name({"id": "my-board", "tool_name": "bad name"})
 
 
 if __name__ == "__main__":

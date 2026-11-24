@@ -217,7 +217,7 @@ class JobStore:
             reasons = assess_exclusions(job, profile)
             if reasons:
                 raise ValueError("Excluded: " + "; ".join(reasons))
-            if not location_matches_region(job, region):
+            if not location_matches_region(job, region, profile):
                 raise ValueError("Primary eligible location is ambiguous or outside this region")
             if overall_fit == "strong" and not (job.get("technical_fit_evidence") and job.get("culture_fit_evidence")):
                 raise ValueError("Strong fit requires explicit technical AND cultural evidence; use good/possible pending review")

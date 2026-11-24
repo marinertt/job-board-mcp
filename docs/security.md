@@ -20,13 +20,21 @@ The exact source automation export may contain a workbook URL or personal prefer
 
 ## MCP transport
 
-Stdio is the default and recommended local transport. The CLI launches its own server subprocess with the same Python interpreter. Stdout is reserved for MCP messages; diagnostics belong on stderr.
+Stdio is the default and recommended local transport. `MCPClient` launches the
+configured server process; this package has no standalone client/server
+launcher. An owning application can call `MCPServer.run()` or embed its
+`FastMCP` instance. Stdout is reserved for MCP messages; diagnostics belong on
+stderr.
 
 Optional Streamable HTTP is loopback-first. It is not production-ready public hosting. Add authentication, authorization, TLS, origin/host validation, rate limits and per-user data isolation before remote use. Do not expose an unauthenticated audit resource containing personal application history.
 
 ## CSV and files
 
-The MCP export tool returns content instead of writing to an arbitrary server path. Only the local client writes a user-selected output file, and it refuses to overwrite an existing file. The exporter prefixes formula-like text with an apostrophe for spreadsheet safety; the stored audit remains unchanged. Review CSV in the target application before further importing it.
+The MCP export tool returns content instead of writing to an arbitrary server
+path. Any file-writing host must choose an explicit local destination and avoid
+overwriting existing files. The exporter prefixes formula-like text with an
+apostrophe for spreadsheet safety; the stored audit remains unchanged. Review
+CSV in the target application before further importing it.
 
 Policy regex checks and place-name recognition are conservative helpers, not complete industry/citizenship/pay adjudication. The host or a human must assess the full prompt, including paid-training floors and unknown country authorization. Missing evidence must not be presented as a successful eligibility check. The v1 promotion API intentionally refuses `strong` unless both technical and culture evidence exist; collecting structured assessment evidence is a future extension.
 

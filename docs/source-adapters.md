@@ -9,6 +9,19 @@ Start with official, documented public feeds where possible. Respect the source'
 
 The catalog may also describe LinkedIn, Built In, Indeed, Dice, Wellfound, ZipRecruiter, Canadian boards, government and development-sector sites. Catalog presence means “recognized search source,” not “working scraper.” Manual-only entries must report that limitation explicitly.
 
+## Source-specific MCP tools
+
+Each enabled Greenhouse or Lever source is exposed as its own MCP search tool.
+Set the optional `tool_name` in source configuration to choose the exact name;
+otherwise the server derives `search_<source-id>`, replacing unsupported
+characters with underscores. Disabled and manual-only sources do not get search
+tools. The generic `search_jobs(source_id, ...)` tool remains available.
+
+All source-specific tools use the same adapter and audit path: capture every
+returned specific posting before filtering the response. `list_sources` and
+`jobboards://catalog` expose the effective tool name so clients can discover
+which tool corresponds to each configured source.
+
 Primary API documentation: [Greenhouse](https://developers.greenhouse.io/job-board.html) and [Lever](https://github.com/lever/postings-api).
 
 ## Adapter contract

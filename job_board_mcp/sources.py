@@ -30,6 +30,7 @@ ALLOWED_HOSTS = frozenset({
 MAX_BYTES = 4 * 1024 * 1024
 MAX_REDIRECTS = 5
 DEFAULT_SOURCES_PATH = files("job_board_mcp").joinpath("data/sources.example.json")
+SUPPORTED_ADAPTERS = frozenset({"greenhouse", "lever"})
 
 
 class SourceUnavailable(ValueError):
@@ -119,7 +120,38 @@ def load_sources(path: str | None = None) -> list[dict]:
     identifiers = [str(x.get("id", "")) for x in sources]
     if any(not identifier for identifier in identifiers) or len(set(identifiers)) != len(identifiers):
         raise ValueError("Every source needs a unique nonempty id")
+    registered_tools = [
+        source_tool_name(source)
+        for source in sources
+        if source.get("enabled") is not False
+        and source_adapter_name(source) in SUPPORTED_ADAPTERS
+    ]
+    if len(set(registered_tools)) != len(registered_tools):
+        raise ValueError("Enabled source tools must have unique tool_name values")
     return sources
+
+
+def source_adapter_name(source: dict) -> str:
+    """Return the configured adapter type, defaulting to manual discovery."""
+    return str(source.get("adapter") or source.get("type") or source.get("kind") or "manual").lower()
+
+
+def source_tool_name(source: dict) -> str:
+    """Return the configured MCP tool name or derive one from its source id."""
+    configured = source.get("tool_name")
+    if configured is None:
+        source_id = str(source.get("id") or "")
+        slug = re.sub(r"[^A-Za-z0-9_-]+", "_", source_id).strip("_")
+        if not slug:
+            raise ValueError("Source id must contain characters usable in an MCP tool name")
+        configured = f"search_{slug}"
+    if not isinstance(configured, str) or not re.fullmatch(
+        r"[A-Za-z][A-Za-z0-9_-]{0,63}", configured
+    ):
+        raise ValueError(
+            "Source tool_name must be 1-64 letters, digits, underscores, or hyphens, starting with a letter"
+        )
+    return configured
 
 
 def _token(source: dict) -> str:
@@ -160,10 +192,10 @@ async def search_source(source: dict, query: str = "", location: str = "") -> li
     query/location intentionally do not constrain upstream collection: every fetched
     posting goes to the audit first. The MCP server applies result filters afterward.
     """
-    kind = str(source.get("adapter") or source.get("type") or source.get("kind") or "manual").lower()
+    kind = source_adapter_name(source)
     if source.get("enabled") is False:
         raise ValueError("This source is disabled")
-    if kind not in ("greenhouse", "lever"):
+    if kind not in SUPPORTED_ADAPTERS:
         raise ValueError("Manual discovery source: use its search prompt, then import specific posting URLs; no scraper is implemented")
     token = _token(source)
     source_id = str(source["id"])

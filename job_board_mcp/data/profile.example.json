@@ -1,16 +1,44 @@
 {
-  "name": "portable-job-monitor",
-  "timezone": "America/New_York",
+  "name": "sample-profile",
+  "timezone": "UTC",
   "discovery_days": 3,
+  "recent_recheck_days": 14,
   "fresh_verification_hours": 24,
-  "regions": ["Canada & International", "NY NJ PA", "DC VA MD", "Fully Remote", "Albuquerque", "Career Transition Jobs"],
-  "retired_regions": ["Tucson Phoenix"],
-  "excluded_companies": ["Capital One", "Navy Federal Credit Union"],
-  "excluded_sectors": ["healthcare", "healthtech", "medtech", "pharmaceutical", "clinical research", "health insurance"],
-  "preferred_technologies": ["Python", "SQL", "PySpark", "Spark", "AWS", "Glue", "Databricks", "Unity Catalog", "migration", "GenAI"],
-  "title_queries": ["senior data engineer", "lead data engineer", "staff data engineer", "data platform", "analytics engineer", "Databricks", "AWS Glue", "ML AI platform", "AI applications", "geospatial", "governance digital transformation"],
-  "locations": ["Canada", "New Jersey eastern Pennsylvania southern New York", "Washington DC Northern Virginia Maryland Winchester", "United States remote", "Albuquerque Rio Rancho New Mexico"],
-  "transition_queries": ["electrical apprenticeship", "building automation controls technician", "industrial facilities maintenance PLC", "rail transit telecom network technical support", "data center technician paid training"],
-  "transition_pay_floors": {"DC VA MD": 70000, "NY NJ PA": 70000, "Winchester": 55000, "Albuquerque": 55000},
-  "constraints": ["Do not promote explicitly military/DoD/DoW-serving positions", "Do not promote roles explicitly requiring active Secret/TS/TS-SCI/polygraph", "Do not promote regular long-distance driving", "Country authorization must be established, not assumed", "Flag recurring travel, pet policy, schedule, physical and transport requirements"]
+  "regions": [
+    "Example Region",
+    "Fully Remote",
+    "Career Transition Jobs"
+  ],
+  "career_transition_region": "Career Transition Jobs",
+  "career_transition_regions": [
+    "Example Region",
+    "Fully Remote"
+  ],
+  "workbook": {
+    "raw_tab": "Raw Search Hits",
+    "regional_tabs": ["Example Region", "Fully Remote"],
+    "career_transition_tab": "Career Transition Jobs"
+  },
+  "region_location_patterns": {
+    "Example Region": {
+      "include_any": ["example region", "sample city"],
+      "require_all": [],
+      "exclude_any": []
+    },
+    "Fully Remote": {
+      "include_any": ["united states", "usa", "u.s."],
+      "require_all": ["remote"],
+      "exclude_any": ["hybrid", "office attendance", "onsite required"]
+    }
+  },
+  "excluded_companies": [],
+  "excluded_sectors": [],
+  "excluded_position_rules": [],
+  "preferred_technologies": ["Python", "SQL"],
+  "title_queries": ["data engineer"],
+  "locations": ["Example Region", "United States remote"],
+  "transition_queries": ["technical apprenticeship"],
+  "transition_locations": ["Example Region"],
+  "transition_pay_floors": {},
+  "constraints": []
 }

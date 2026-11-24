@@ -18,7 +18,11 @@ The server reads these environment variables:
 
 Copy the shipped examples into your private configuration directory and edit them. Keep employer boards explicit: knowing that a company uses Greenhouse does not establish its board token. Use `sources` to inspect the loaded configuration before discovery.
 
-The exported policy retains the monitor's active areas: Canada & International, NY NJ PA, DC VA MD, Fully Remote, Albuquerque, and Career Transition Jobs. Albuquerque/Rio Rancho replaces Arizona discovery. Historical Arizona rows need not be deleted or relabeled to make that change.
+Region names, matching rules, search locations, and transition pay thresholds come from the active profile. Configure them there rather than editing policy code. Existing imported rows outside the active profile are preserved and are not automatically deleted or relabeled.
+
+`region_location_patterns` maps each configured region to regular expressions evaluated against the posting's location and work arrangement. `include_any` requires at least one match when present; `require_all` requires every pattern; `exclude_any` rejects a match. Set `career_transition_region` and `career_transition_regions` to configure the combined transition view. Keep patterns narrow enough that one posting is not unnecessarily duplicated across regional views.
+
+Exclusions are also profile-driven: `excluded_companies` matches company names, `excluded_sectors` matches the posting's sector, and `excluded_position_rules` accepts objects with a regular-expression `pattern`, optional `fields`, and a `reason`. Keep the example profile generic; put personal company, location, and position rules only in the private profile.
 
 ## 3. Optional historical CSV import
 
@@ -45,7 +49,7 @@ Import raw first, then curated views. The first curated import initializes its u
 
 `config/monitor-export.json` preserves the exported task's schedule and timezone as portable metadata. It is not an executable scheduler; the original task remains unchanged. The public-ready bundle intentionally omits `.local/monitor-export.json` and all live spreadsheet/application data.
 
-Supported curated view names are the active region names and Career Transition Jobs. Run imports against a copied database first. Existing status and `my_notes` values are user-owned and must not be overwritten by reimport, discovery or rechecking. A portable export does not establish that a previously seen job is still open; queue and reverify it.
+Supported curated view names are the active profile's region names and career-transition tab. Run imports against a copied database first. Existing status and `my_notes` values are user-owned and must not be overwritten by reimport, discovery or rechecking. A portable export does not establish that a previously seen job is still open; queue and reverify it.
 
 ## Schema mappings
 

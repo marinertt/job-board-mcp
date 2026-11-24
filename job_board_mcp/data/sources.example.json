@@ -1,6 +1,6 @@
 [
-  {"id":"greenhouse_example","name":"Example Greenhouse employer board","adapter":"greenhouse","board":"replace_with_board_token","company":"Replace with employer name","enabled":false,"notes":"Configure a real employer board token and enable it."},
-  {"id":"lever_example","name":"Example Lever employer board","adapter":"lever","board":"replace_with_site_name","company":"Replace with employer name","enabled":false,"notes":"Configure a real employer site name and enable it."},
+  {"id":"greenhouse_example","name":"Example Greenhouse employer board","adapter":"greenhouse","tool_name":"search_greenhouse_example","board":"replace_with_board_token","company":"Replace with employer name","enabled":false,"notes":"Configure a real employer board token and enable it."},
+  {"id":"lever_example","name":"Example Lever employer board","adapter":"lever","tool_name":"search_lever_example","board":"replace_with_site_name","company":"Replace with employer name","enabled":false,"notes":"Configure a real employer site name and enable it."},
   {"id":"linkedin","name":"LinkedIn Jobs","adapter":"manual","url":"https://www.linkedin.com/jobs/","notes":"Primary discovery via your permitted search/browser/provider; import specific URLs. No LinkedIn scraping is implemented."},
   {"id":"builtin","name":"Built In","adapter":"manual","url":"https://builtin.com/jobs","notes":"Import specific posting URLs, never search/category pages."},
   {"id":"indeed","name":"Indeed","adapter":"manual","url":"https://www.indeed.com/","notes":"Use permitted access and import specific postings."},

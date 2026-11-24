@@ -6,12 +6,12 @@ the connected host decides when to invoke tools and how to supply external hits.
 
 from __future__ import annotations
 
-import argparse
 import csv
 import io
 import json
 import os
 from importlib.resources import files
+from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -24,7 +24,13 @@ from .policy import (
     build_queries,
     load_profile,
 )
-from .sources import load_sources, search_source
+from .sources import (
+    SUPPORTED_ADAPTERS,
+    load_sources,
+    search_source,
+    source_adapter_name,
+    source_tool_name,
+)
 from .store import JobStore
 from .verification import verify_posting
 
@@ -59,15 +65,28 @@ def _csv(rows: list[dict], headers: list[str] | tuple[str, ...]) -> str:
     return stream.getvalue()
 
 
-def create_server() -> FastMCP:
-    """Create the local server using operator-configured paths, not tool paths."""
-    database = os.environ.get("JOB_MONITOR_DB", ".local/jobs.sqlite3")
-    profile_path = os.environ.get("JOB_MONITOR_PROFILE")
-    sources_path = os.environ.get("JOB_MONITOR_SOURCES")
+def _create_server(
+    database: str | None = None,
+    profile_path: str | None = None,
+    sources_path: str | None = None,
+) -> FastMCP:
+    """Build the FastMCP instance with operator-configured paths."""
+    database = database or os.environ.get("JOB_MONITOR_DB", ".local/jobs.sqlite3")
+    profile_path = profile_path or os.environ.get("JOB_MONITOR_PROFILE")
+    sources_path = sources_path or os.environ.get("JOB_MONITOR_SOURCES")
     store = JobStore(database)
     profile = load_profile(profile_path)
     sources = load_sources(sources_path)
-    catalog = {str(source["id"]): source for source in sources}
+    advertised_sources = []
+    for source in sources:
+        advertised = dict(source)
+        if (
+            source.get("enabled") is not False
+            and source_adapter_name(source) in SUPPORTED_ADAPTERS
+        ):
+            advertised["tool_name"] = source_tool_name(source)
+        advertised_sources.append(advertised)
+    catalog = {str(source["id"]): source for source in advertised_sources}
     server = FastMCP(
         "Job Board Monitor",
         instructions=(
@@ -82,14 +101,45 @@ def create_server() -> FastMCP:
         stateless_http=True,
     )
 
+    async def search_and_audit(
+        source: dict, query: str, location: str, search_stream: str
+    ) -> dict:
+        source_id = str(source["id"])
+        hits = await search_source(source, query=query, location=location)
+        audit = store.upsert_hits(hits, search_stream=search_stream)
+        filtered = store.list_jobs(
+            JobFilters(query=query, location=location, source_id=source_id, limit=1000)
+        )
+        return {
+            "audit": audit,
+            "fetched": len(hits),
+            "jobs": filtered,
+            "note": "All fetched specific posts were captured before filtering; verify before promotion.",
+        }
+
+    def register_source_search_tool(source: dict, tool_name: str) -> None:
+        source_name = str(source.get("name") or source["id"])
+
+        async def search_configured_source(
+            query: str = "", location: str = "", search_stream: str = ""
+        ) -> dict:
+            """Fetch and audit every specific posting from this configured source."""
+            return await search_and_audit(source, query, location, search_stream)
+
+        server.tool(
+            name=tool_name,
+            description=f"Search the configured {source_name} source and audit every specific posting.",
+            annotations=NETWORK_READ,
+        )(search_configured_source)
+
     @server.tool(annotations=READ_ONLY)
     def list_sources() -> list[dict]:
         """List configured job-source adapters and manual-discovery boards.
 
-        A source is an external integration; the catalog is an MCP resource.
-        A manual-only source cannot be searched by this server.
+        Enabled adapters include their source-specific search tool name.
+        Manual-only sources can be used for external discovery and import.
         """
-        return sources
+        return advertised_sources
 
     @server.tool(annotations=NETWORK_READ)
     async def search_jobs(
@@ -102,17 +152,7 @@ def create_server() -> FastMCP:
         """
         if source_id not in catalog:
             raise ValueError(f"Unknown source_id: {source_id}. Call list_sources first.")
-        hits = await search_source(catalog[source_id], query=query, location=location)
-        audit = store.upsert_hits(hits, search_stream=search_stream)
-        filtered = store.list_jobs(
-            JobFilters(query=query, location=location, source_id=source_id, limit=1000)
-        )
-        return {
-            "audit": audit,
-            "fetched": len(hits),
-            "jobs": filtered,
-            "note": "All fetched specific posts were captured before filtering; verify before promotion.",
-        }
+        return await search_and_audit(catalog[source_id], query, location, search_stream)
 
     @server.tool(annotations=READ_ONLY)
     def filter_jobs(
@@ -196,7 +236,7 @@ def create_server() -> FastMCP:
     @server.resource("jobboards://catalog", mime_type="application/json")
     def source_catalog() -> str:
         """Read the source catalog (configuration, not live job-search results)."""
-        return _json(sources)
+        return _json(advertised_sources)
 
     @server.resource("jobboard://{source_id}", mime_type="application/json")
     def source_details(source_id: str) -> str:
@@ -233,9 +273,12 @@ def create_server() -> FastMCP:
         prompt = prompt_path.read_text(encoding="utf-8")
         return (
             f"Requested run date: {as_of or 'current local date in configured timezone'}.\n"
-            "Use policy://profile as the current configuration. Do not claim any search, "
-            "check, export, or write succeeded unless its actual result confirms success. "
-            "The server does not schedule runs or supply an LLM/search-provider account.\n\n"
+            "ACTIVE PROFILE (authoritative configuration):\n"
+            + _json(profile)
+            + "\n\nUse jobboards://catalog for configured source details if they are "
+            "needed. Do not claim any search, check, export, or write succeeded unless "
+            "its actual result confirms success. The server does not schedule runs or "
+            "supply an LLM/search-provider account.\n\n"
             + prompt
         )
 
@@ -267,15 +310,42 @@ def create_server() -> FastMCP:
             "or meaningfully changed, suppress a redundant update."
         )
 
+    reserved_tool_names = {
+        "list_sources",
+        "search_jobs",
+        "filter_jobs",
+        "import_hits",
+        "check_posting",
+        "get_recheck_queue",
+        "promote_job",
+        "export_jobs",
+    }
+    for source in sources:
+        if (
+            source.get("enabled") is False
+            or source_adapter_name(source) not in SUPPORTED_ADAPTERS
+        ):
+            continue
+        tool_name = source_tool_name(source)
+        if tool_name in reserved_tool_names:
+            raise ValueError(f"Source tool_name conflicts with a built-in tool: {tool_name}")
+        reserved_tool_names.add(tool_name)
+        register_source_search_tool(source, tool_name)
+
     return server
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Local job-board MCP server (no applications).")
-    parser.add_argument("--transport", choices=("stdio", "streamable-http"), default="stdio")
-    args = parser.parse_args()
-    create_server().run(transport=args.transport)
+class MCPServer:
+    """Own a configured FastMCP server for use by a hosting application."""
 
+    def __init__(
+        self,
+        database: str | None = None,
+        profile_path: str | None = None,
+        sources_path: str | None = None,
+    ) -> None:
+        self.server = _create_server(database, profile_path, sources_path)
 
-if __name__ == "__main__":
-    main()
+    def run(self, transport: Literal["stdio", "streamable-http"] = "stdio") -> None:
+        """Run the server from an owning application."""
+        self.server.run(transport=transport)

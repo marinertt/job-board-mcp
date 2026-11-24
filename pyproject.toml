@@ -10,12 +10,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["mcp>=1.29,<2", "httpx>=0.28,<1", "pydantic>=2.10,<3"]
 
-[project.scripts]
-job-board-server = "job_board_mcp.server:main"
-job-board-client = "job_board_mcp.client:main"
-
 [tool.setuptools.packages.find]
 include = ["job_board_mcp*"]
 
 [tool.setuptools.package-data]
-job_board_mcp = ["data/*.json", "data/*.md"]
+job_board_mcp = ["data/*.json", "data/*.md", "data/*.html"]

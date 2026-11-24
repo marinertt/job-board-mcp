@@ -19,7 +19,8 @@ flowchart TD
 | Primitive | Name | Responsibility |
 | --- | --- | --- |
 | Tool | `list_sources` | Return source IDs, capabilities and limitations |
-| Tool | `search_jobs` | Fetch a supported board, audit all surfaced specific posts, then return a filtered view |
+| Tool | `search_jobs` | Fetch a supported board by source ID, audit all surfaced specific posts, then return a filtered view |
+| Tool | Configured source search tools | One tool per enabled Greenhouse/Lever source; name is configured or derived from source ID |
 | Tool | `filter_jobs` | Query the already-captured audit; never discover new jobs |
 | Tool | `import_hits` | Capture specific URLs from outside discovery; no user-field overwrite |
 | Tool | `check_posting` | Recheck one exact posting and append availability evidence/history |
@@ -35,7 +36,10 @@ flowchart TD
 | Prompt | `assess_job` | Guide evidence-based technical, cultural and practical assessment |
 | Prompt | `report_changes` | Guide a concise delta report rather than repeating unchanged leads |
 
-Resources do not automatically load websites. A host chooses whether to read a resource. A model or client chooses whether to call a tool. A person or host selects a prompt. The CLI can demonstrate all three without any language model.
+Resources do not automatically load websites. A host chooses whether to read a
+resource. A model or client chooses whether to call a tool. A person or host
+selects a prompt. This package exposes importable client/server classes and
+does not include a command-line launcher.
 
 ## Evidence and state
 
