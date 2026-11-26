@@ -90,10 +90,11 @@ python -m job_board_mcp.gui
 
 It binds to loopback and opens a browser. The left panel edits a private profile
 and source configuration; **Save & reconnect** writes copies under
-`.local/job-board-demo/` and restarts the MCP subprocess. The right workbench
-shows the client's MCP request, the server's actual protocol response, and
-results tabs. It can read resources, render prompts, run enabled source tools,
-verify postings, and request promotion through the existing gates.
+`.local/job-board-demo/` and restarts the MCP subprocess. The default right
+panel focuses on the raw audit and curated result tabs. The **How it works**
+view preserves the client/server walkthrough, including protocol requests and
+responses, registered tools, resources, and prompts. It can run enabled source
+tools, verify postings, and request promotion through the existing gates.
 
 Use **Load demo fixtures** to populate the raw audit with clearly labeled
 `.invalid` sample URLs. They are never real jobs and remain `Unclear`; the GUI

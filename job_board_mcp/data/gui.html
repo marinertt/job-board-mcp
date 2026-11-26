@@ -70,6 +70,10 @@
     .tag.amber { color: var(--amber); border-color: #705c38; }
     .tag.red { color: var(--red); border-color: #74434c; }
     .status-note { min-height: 18px; font-size: 11px; color: var(--muted); margin-top: 8px; }
+    .view-switcher { display: flex; gap: 5px; width: max-content; max-width: 100%; padding: 4px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 11px; background: #0e1621; }
+    .view-tab { color: var(--muted); border-color: transparent; background: transparent; }
+    .view-tab[aria-selected="true"] { color: var(--text); border-color: #3c566d; background: #24384e; }
+    .view-panel[hidden] { display: none; }
     .workbench { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0 14px; }
     .window { overflow: hidden; min-width: 0; }
     .window-head { padding: 12px 15px; background: #182638; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
@@ -129,7 +133,7 @@
   </style>
 </head>
 <body data-mode="local">
-  <a class="skip" href="#main">Skip to workbench</a>
+  <a class="skip" href="#results-section">Skip to results</a>
   <header class="portfolio-bar">
     <div class="portfolio-bar-inner">
       <a class="portfolio-brand" href="https://www.sparktacus.io/">SPARKTACUS<span>!</span></a>
@@ -145,7 +149,7 @@
     <aside>
       <div class="brand">
         <div class="mark">JB</div>
-        <div><b>Job Board MCP</b><small>Interactive protocol workbench</small></div>
+        <div><b>Job Board MCP</b><small>Local-first job monitor</small></div>
       </div>
       <div class="config-head">
         <div><div class="eyebrow">01 · Configure</div><h2 style="margin-top:4px">Monitor profile</h2></div>
@@ -176,67 +180,83 @@
     </aside>
 
     <main id="main">
-      <div class="topline">
-        <div>
-          <div class="eyebrow">MCP · Client ↔ Server</div>
-          <h1>See the call. Follow the data.</h1>
-          <p class="subtitle">Explore the actual MCP tools, resources, and prompts. Every action shows the client request and the server response.</p>
-        </div>
-        <div class="status"><span class="dot"></span><span id="connection-status">Connecting to local server</span></div>
+      <div class="view-switcher" role="tablist" aria-label="Main views">
+        <button id="results-view-tab" class="view-tab" role="tab" data-workspace-tab aria-selected="true" aria-controls="results-view">Results</button>
+        <button id="how-it-works-tab" class="view-tab" role="tab" data-workspace-tab aria-selected="false" aria-controls="how-it-works-view" tabindex="-1">How it works</button>
       </div>
       <div id="mode-notice" class="notice" hidden></div>
 
-      <section class="workbench">
-        <div class="section window client">
-          <div class="window-head"><div class="window-title"><span class="window-icon">C</span> MCP client</div><span class="tag">request</span></div>
-          <div class="window-body">
-            <div class="step"><span class="step-num">1</span><span id="client-step"><b>Choose an action.</b> This panel records the request sent over MCP stdio.</span></div>
-            <div class="request-block"><span class="eyebrow">LAST CLIENT REQUEST</span><pre id="client-request">Waiting for your first action…</pre></div>
+      <section id="results-view" class="view-panel" role="tabpanel" aria-labelledby="results-view-tab">
+        <div class="topline">
+          <div>
+            <div class="eyebrow">Job monitor</div>
+            <h1>Search results</h1>
+            <p id="monitor-subtitle" class="subtitle">Browse captured postings by view. Configure searches and sources in the profile panel.</p>
+          </div>
+          <div class="status"><span class="dot"></span><span id="connection-status">Connecting to local server</span></div>
+        </div>
+        <section class="section actions">
+          <div class="field"><label for="source-select">SOURCE</label><select id="source-select"></select></div>
+          <div class="field"><label for="search-query">QUERY</label><input id="search-query" placeholder="e.g. data engineer"></div>
+          <div class="field"><label for="search-location">LOCATION</label><input id="search-location" placeholder="e.g. United States remote"></div>
+          <button id="search-button" class="primary">Run search →</button>
+        </section>
+        <div class="tools-row section">
+          <div><div class="eyebrow">Sample results</div><span class="muted">Load fictional postings to explore the result views.</span></div>
+          <button id="seed-demo" class="ghost">Load demo fixtures</button>
+        </div>
+        <div id="results-tabs" class="tabs" role="tablist" aria-label="Result views"></div>
+        <section id="results-section" class="section results">
+          <div class="results-head"><div><div class="eyebrow">Results</div><h2 id="results-title">Raw Search Hits</h2></div><div class="inline"><span id="result-count" class="tag">0 postings</span><button id="refresh-results" class="ghost">Refresh ↻</button></div></div>
+          <div id="results-body" class="results-body"><div class="empty">Loading audit results…</div></div>
+        </section>
+      </section>
+
+      <section id="how-it-works-view" class="view-panel" role="tabpanel" aria-labelledby="how-it-works-tab" hidden>
+        <div class="topline">
+          <div>
+            <div class="eyebrow">MCP · Client ↔ Server</div>
+            <h1>See the call. Follow the data.</h1>
+            <p class="subtitle">Explore the actual MCP tools, resources, and prompts. Every action shows the client request and the server response.</p>
           </div>
         </div>
-        <div class="section window server">
-          <div class="window-head"><div class="window-title"><span class="window-icon">S</span> MCP server</div><span class="tag green">response</span></div>
-          <div class="window-body">
-            <div class="step"><span class="step-num">2</span><span id="server-step"><b>Server ready.</b> Calls are routed to registered FastMCP handlers.</span></div>
-            <div class="response-block"><span class="eyebrow">LAST SERVER RESPONSE</span><pre id="server-response">Server response will appear here.</pre></div>
+        <section class="workbench">
+          <div class="section window client">
+            <div class="window-head"><div class="window-title"><span class="window-icon">C</span> MCP client</div><span class="tag">request</span></div>
+            <div class="window-body">
+              <div class="step"><span class="step-num">1</span><span id="client-step"><b>Choose an action.</b> This panel records the request sent over MCP stdio.</span></div>
+              <div class="request-block"><span class="eyebrow">LAST CLIENT REQUEST</span><pre id="client-request">Waiting for your first action…</pre></div>
+            </div>
           </div>
+          <div class="section window server">
+            <div class="window-head"><div class="window-title"><span class="window-icon">S</span> MCP server</div><span class="tag green">response</span></div>
+            <div class="window-body">
+              <div class="step"><span class="step-num">2</span><span id="server-step"><b>Server ready.</b> Calls are routed to registered FastMCP handlers.</span></div>
+              <div class="response-block"><span class="eyebrow">LAST SERVER RESPONSE</span><pre id="server-response">Server response will appear here.</pre></div>
+            </div>
+          </div>
+        </section>
+        <div class="tools-row section">
+          <div><div class="eyebrow">Registered tools</div><div id="tools-list" class="tools-list"></div></div>
+        </div>
+        <div class="below">
+          <section class="section subpanel">
+            <div class="eyebrow">MCP resources</div><h2>Read a resource</h2>
+            <p class="hint">Resources are read explicitly; selecting one sends <code>resources/read</code>.</p>
+            <div class="inline" style="margin-top:8px"><select id="resource-select" style="flex:1"></select><button id="read-resource">Read</button></div>
+            <pre id="resource-output" class="response-block" style="margin-top:8px;white-space:pre-wrap;overflow:auto;max-height:160px;font-size:11px">No resource read yet.</pre>
+          </section>
+          <section class="section subpanel">
+            <div class="eyebrow">MCP prompts</div><h2>Render a prompt</h2>
+            <p class="hint">Prompts are returned as instructions/context; rendering one does not run a search.</p>
+            <select id="prompt-select"></select>
+            <div id="prompt-arguments"></div>
+            <button id="get-prompt" style="margin-top:4px">Get prompt</button>
+            <pre id="prompt-output" class="response-block" style="margin-top:8px;white-space:pre-wrap;overflow:auto;max-height:160px;font-size:11px">No prompt rendered yet.</pre>
+          </section>
         </div>
       </section>
-
-      <section class="section actions">
-        <div class="field"><label for="source-select">SOURCE TOOL</label><select id="source-select"></select></div>
-        <div class="field"><label for="search-query">QUERY</label><input id="search-query" placeholder="e.g. data engineer"></div>
-        <div class="field"><label for="search-location">LOCATION</label><input id="search-location" placeholder="e.g. United States remote"></div>
-        <button id="search-button" class="primary">Run search →</button>
-      </section>
-      <div class="tools-row section">
-        <div><div class="eyebrow">Registered tools</div><div id="tools-list" class="tools-list"></div></div>
-        <button id="seed-demo" class="ghost">Load demo fixtures</button>
-      </div>
-
-      <div id="results-tabs" class="tabs" role="tablist"></div>
-      <section class="section results">
-        <div class="results-head"><div><div class="eyebrow">03 · Results</div><h2 id="results-title">Raw Search Hits</h2></div><div class="inline"><span id="result-count" class="tag">0 postings</span><button id="refresh-results" class="ghost">Refresh ↻</button></div></div>
-        <div id="results-body" class="results-body"><div class="empty">Loading audit results…</div></div>
-      </section>
-
-      <div class="below">
-        <section class="section subpanel">
-          <div class="eyebrow">04 · MCP resources</div><h2>Read a resource</h2>
-          <p class="hint">Resources are read explicitly; selecting one sends <code>resources/read</code>.</p>
-          <div class="inline" style="margin-top:8px"><select id="resource-select" style="flex:1"></select><button id="read-resource">Read</button></div>
-          <pre id="resource-output" class="response-block" style="margin-top:8px;white-space:pre-wrap;overflow:auto;max-height:160px;font-size:11px">No resource read yet.</pre>
-        </section>
-        <section class="section subpanel">
-          <div class="eyebrow">05 · MCP prompts</div><h2>Render a prompt</h2>
-          <p class="hint">Prompts are returned as instructions/context; rendering one does not run a search.</p>
-          <select id="prompt-select"></select>
-          <div id="prompt-arguments"></div>
-          <button id="get-prompt" style="margin-top:4px">Get prompt</button>
-          <pre id="prompt-output" class="response-block" style="margin-top:8px;white-space:pre-wrap;overflow:auto;max-height:160px;font-size:11px">No prompt rendered yet.</pre>
-        </section>
-      </div>
-      <div id="footer" class="footer">Loopback only · SQLite demo data stays in .local · No applications are submitted</div>
+      <div id="footer" class="footer">Local or browser-only demo data · No applications are submitted</div>
     </main>
   </div>
 
@@ -245,6 +265,7 @@
     const STATIC_DEMO = document.body.dataset.mode === "static";
     const STATIC_STORAGE_KEY = "job-board-mcp-pages-demo-v1";
     const app = { profile: null, sources: [], tools: [], resources: [], templates: [], prompts: [], view: "raw", jobs: [] };
+    const workspaceTabs = [...document.querySelectorAll("[data-workspace-tab]")];
     let staticDefaults;
     const pretty = (value) => {
       const text = JSON.stringify(value, null, 2);
@@ -252,6 +273,31 @@
     };
     const asLines = (value) => Array.isArray(value) ? value.join("\n") : "";
     const fromLines = (value) => value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+
+    function activateWorkspaceTab(selectedTab, focus = false) {
+      for (const tab of workspaceTabs) {
+        const selected = tab === selectedTab;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        $(tab.getAttribute("aria-controls")).hidden = !selected;
+      }
+      if (focus) selectedTab.focus();
+    }
+
+    workspaceTabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activateWorkspaceTab(tab));
+      tab.addEventListener("keydown", (event) => {
+        const nextIndex = event.key === "ArrowRight" ? (index + 1) % workspaceTabs.length
+          : event.key === "ArrowLeft" ? (index + workspaceTabs.length - 1) % workspaceTabs.length
+          : event.key === "Home" ? 0
+          : event.key === "End" ? workspaceTabs.length - 1
+          : -1;
+        if (nextIndex >= 0) {
+          event.preventDefault();
+          activateWorkspaceTab(workspaceTabs[nextIndex], true);
+        }
+      });
+    });
 
     async function getStaticDefaults() {
       if (!staticDefaults) {
@@ -469,7 +515,7 @@
         $("sidebar-notice").innerHTML = "<b>Static demo:</b> settings and synthetic fixtures stay in this browser. No searches or posting checks run.";
         $("save-config").textContent = "Save in this browser";
         $("footer").textContent = "Static simulation · browser local storage · no live searches, checks, promotions, or applications";
-        document.querySelector(".subtitle").textContent = "Explore a simulated MCP client/server flow. The hosted demo makes no live searches or posting checks.";
+        $("monitor-subtitle").textContent = "Browse simulated postings by view. The hosted demo makes no live searches or posting checks.";
         document.querySelector(".window.client .window-title").lastChild.textContent = " Client request (simulated)";
         document.querySelector(".window.server .window-title").lastChild.textContent = " MCP server simulation";
         $("client-step").textContent = "Choose an action. This panel shows the simulated protocol request.";
