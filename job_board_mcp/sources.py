@@ -129,9 +129,13 @@ async def safe_get(url: str, *, client: httpx.AsyncClient | None = None) -> http
 
 def load_sources(path: str | None = None) -> list[dict]:
     """Load configured sources; manual boards remain visible, not fake adapters."""
+    sources_json = os.environ.get("JOB_MONITOR_SOURCES_JSON")
     explicit = path or os.environ.get("JOB_MONITOR_SOURCES")
-    location = Path(explicit) if explicit else DEFAULT_SOURCES_PATH
-    payload = json.loads(location.read_text(encoding="utf-8"))
+    if sources_json and not explicit:
+        payload = json.loads(sources_json)
+    else:
+        location = Path(explicit) if explicit else DEFAULT_SOURCES_PATH
+        payload = json.loads(location.read_text(encoding="utf-8"))
     sources = payload.get("sources", []) if isinstance(payload, dict) else payload
     if not isinstance(sources, list) or not all(isinstance(x, dict) for x in sources):
         raise ValueError("Sources configuration must be an array or a sources array")

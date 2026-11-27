@@ -74,7 +74,18 @@ def _create_server(
     database = database or os.environ.get("JOB_MONITOR_DB", ".local/jobs.sqlite3")
     profile_path = profile_path or os.environ.get("JOB_MONITOR_PROFILE")
     sources_path = sources_path or os.environ.get("JOB_MONITOR_SOURCES")
-    store = JobStore(database)
+    store_backend = os.environ.get("JOB_MONITOR_STORE", "sqlite").casefold()
+    if store_backend == "sqlite":
+        store = JobStore(database)
+    elif store_backend == "firestore":
+        from .firestore_store import FirestoreJobStore
+
+        store = FirestoreJobStore(
+            project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
+            collection=os.environ.get("JOB_MONITOR_FIRESTORE_COLLECTION", "job_monitor_jobs"),
+        )
+    else:
+        raise ValueError("JOB_MONITOR_STORE must be 'sqlite' or 'firestore'")
     profile = load_profile(profile_path)
     sources = load_sources(sources_path)
     advertised_sources = []
@@ -92,8 +103,8 @@ def _create_server(
             "Use check_posting before promotion. Application status and my_notes are "
             "user-owned and must not be changed by availability checks. No tool submits applications."
         ),
-        host="127.0.0.1",
-        port=8000,
+        host=os.environ.get("HOST", "127.0.0.1"),
+        port=int(os.environ.get("PORT", "8000")),
         json_response=True,
         stateless_http=True,
     )

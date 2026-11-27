@@ -160,6 +160,17 @@ default stdio transport avoids opening a network listener. Optional
 Streamable HTTP is for trusted local use; do not expose it publicly without an
 authenticated deployment design.
 
+## Private GCP deployment
+
+The optional GCP extra selects Firestore for durable job history and supports a
+private Cloud Run deployment with IAM invocation checks. Local SQLite/stdio
+remains the default. The included Terraform does not grant `allUsers` access;
+the public website remains a browser-only fixture demo.
+
+See [the GCP architecture and deployment guide](docs/gcp-demo-architecture.md)
+before provisioning resources. Cloud Run and Firestore use can incur charges;
+set a billing budget first.
+
 ## Monitor rules preserved
 
 - Keep all specific discovered postings, including exclusions and unverified or closed links; omit generic search/career pages.
@@ -191,5 +202,6 @@ The portable monitor instructions are in `prompts/monitor.md`; the MCP `run_job_
 - [Add a job source](docs/source-adapters.md)
 - [Parallel workstreams and next milestones](docs/roadmap.md)
 - [Security and privacy boundaries](docs/security.md)
+- [GCP demo architecture and deployment sequence](docs/gcp-demo-architecture.md)
 
 Primary references: [official MCP Python SDK v1 documentation](https://py.sdk.modelcontextprotocol.io/v1/), [Greenhouse Job Board API](https://developers.greenhouse.io/job-board.html), and [Lever Postings API](https://github.com/lever/postings-api).
