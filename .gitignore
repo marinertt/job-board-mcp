@@ -16,3 +16,8 @@ exports/*
 !exports/.gitkeep
 credentials*.json
 token*.json
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+!terraform.tfvars.example

@@ -1,0 +1,12 @@
+project_id     = "replace-with-your-project-id"
+region         = "us-east1"
+firestore_location = "nam5"
+container_image = "us-east1-docker.pkg.dev/replace-with-your-project-id/job-monitor/job-monitor@sha256:replace-with-image-digest"
+
+# Use your own account, or a dedicated caller service account for an MCP host.
+# Example: ["user:you@example.com"]
+invoker_members = []
+
+# Keep empty unless a future integration needs a credential. Create each secret
+# outside Terraform and pass a numeric version; never put secret payloads here.
+secret_env = {}

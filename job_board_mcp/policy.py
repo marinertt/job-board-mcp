@@ -78,9 +78,13 @@ CAREER_HEADERS = [
 
 
 def load_profile(path: str | None = None) -> dict:
-    profile = json.loads(
-        Path(path or os.environ.get("JOB_MONITOR_PROFILE", DEFAULT_PROFILE_PATH)).read_text()
-    )
+    profile_json = os.environ.get("JOB_MONITOR_PROFILE_JSON")
+    if profile_json and not path and not os.environ.get("JOB_MONITOR_PROFILE"):
+        profile = json.loads(profile_json)
+    else:
+        profile = json.loads(
+            Path(path or os.environ.get("JOB_MONITOR_PROFILE", DEFAULT_PROFILE_PATH)).read_text()
+        )
     if not isinstance(profile, dict) or not isinstance(profile.get("regions"), list):
         raise ValueError("Profile must be an object containing a regions list")
     profile.pop("active_profile_id", None)
