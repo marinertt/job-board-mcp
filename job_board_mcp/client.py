@@ -28,9 +28,7 @@ class MCPClient:
             read_stream, write_stream = await exit_stack.enter_async_context(
                 stdio_client(self.server_parameters)
             )
-            session = await exit_stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
+            session = await exit_stack.enter_async_context(ClientSession(read_stream, write_stream))
             await session.initialize()
         except BaseException:
             await exit_stack.aclose()
@@ -78,7 +76,5 @@ class MCPClient:
         resource_uri = uri if isinstance(uri, AnyUrl) else AnyUrl(uri)
         return await self.session.read_resource(resource_uri)
 
-    async def get_prompt(
-        self, name: str, arguments: dict[str, str] | None = None
-    ) -> Any:
+    async def get_prompt(self, name: str, arguments: dict[str, str] | None = None) -> Any:
         return await self.session.get_prompt(name, arguments=arguments or {})

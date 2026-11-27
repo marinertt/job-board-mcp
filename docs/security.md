@@ -18,6 +18,45 @@ SQLite stores application-related history. Treat it, CSV exports and private pro
 
 The exact source automation export may contain a workbook URL or personal preferences. It is kept under ignored `.local/`; the repository-facing prompt is sanitized. A ZIP can contain ignored files, so inspect the bundle before sharing or uploading it.
 
+## Vulnerability detection and remediation
+
+The free `Free quality and security checks` GitHub Actions workflow runs on
+pushes, pull requests, weekly, and on demand. Ruff checks Python lint and
+formatting, Bandit checks Python source for common security issues, and
+pip-audit checks installed dependencies against known vulnerability data.
+These tools are signals for review, not proof that the project is vulnerability
+free. Bandit is heuristic and currently scans `job_board_mcp`; pip-audit uses
+`--skip-editable`, so it audits installed dependencies but not this
+unpublished editable project as a package. The workflow does not automatically
+change or upgrade code or dependencies.
+
+When a finding appears:
+
+1. Triage the report and create a GitHub issue for every actionable
+   vulnerability, including findings that still need confirmation. Include
+   severity, affected component and versions, the scanner or review that
+   identified it, impact, and remediation status. Do not include credentials
+   or unnecessary exploit details. Close false positives with the reason
+   documented; document any suppression with its rationale and a recheck
+   condition.
+2. For dependency findings, update the compatible version bounds in
+   `pyproject.toml`, install the updated project, and rerun pip-audit and the
+   test suite. Prefer a patched compatible release; do not suppress a finding
+   just to make CI pass.
+3. For source findings, fix the underlying unsafe behavior and add or update a
+   focused regression test. Review the fix and rerun Bandit, Ruff, and the test
+   suite before merging.
+4. Treat critical and high-severity findings as release blockers until fixed
+   or until maintainers document an explicit mitigation and acceptance. Track
+   medium and low findings with an owner and a planned review.
+
+Do not disclose details of an unpatched vulnerability in a public issue if
+that could put users at risk. Use GitHub's private vulnerability reporting or
+security-advisory flow if enabled, or contact a maintainer privately; create a
+public tracking issue once disclosure is safe. The automated workflow reports
+findings but does not create issues automatically. This project documents
+triage expectations but does not promise a fixed remediation deadline.
+
 ## MCP transport
 
 Stdio is the default and recommended local transport. `MCPClient` launches the

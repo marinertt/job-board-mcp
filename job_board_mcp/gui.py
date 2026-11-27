@@ -3,23 +3,23 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import Future, TimeoutError as FutureTimeout
 import json
 import os
-from pathlib import Path
 import sys
 import threading
+import webbrowser
+from concurrent.futures import Future
+from concurrent.futures import TimeoutError as FutureTimeout
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
-import webbrowser
 
 from mcp import StdioServerParameters
 
 from .client import MCPClient
 from .sources import load_sources
-
 
 MAX_REQUEST_BYTES = 1_000_000
 TOOL_TIMEOUT_SECONDS = 90
@@ -43,11 +43,13 @@ class MCPBridge:
 
     def __init__(self, database: Path, profile_path: Path, sources_path: Path) -> None:
         env = dict(os.environ)
-        env.update({
-            "JOB_MONITOR_DB": str(database),
-            "JOB_MONITOR_PROFILE": str(profile_path),
-            "JOB_MONITOR_SOURCES": str(sources_path),
-        })
+        env.update(
+            {
+                "JOB_MONITOR_DB": str(database),
+                "JOB_MONITOR_PROFILE": str(profile_path),
+                "JOB_MONITOR_SOURCES": str(sources_path),
+            }
+        )
         parameters = StdioServerParameters(
             command=sys.executable,
             args=["-c", "from job_board_mcp.server import MCPServer; MCPServer().run()"],
@@ -64,7 +66,9 @@ class MCPBridge:
         if not self.ready.wait(TOOL_TIMEOUT_SECONDS):
             raise TimeoutError("Timed out connecting the GUI to its MCP server.")
         if self.startup_error is not None:
-            raise RuntimeError(f"Could not connect to MCP server: {self.startup_error}") from self.startup_error
+            raise RuntimeError(
+                f"Could not connect to MCP server: {self.startup_error}"
+            ) from self.startup_error
 
     def _serve_loop(self) -> None:
         asyncio.set_event_loop(self.loop)
@@ -103,9 +107,7 @@ class MCPBridge:
             raise ValueError(f"Unsupported MCP client operation: {operation}")
         del method
         result: Future = Future()
-        self.loop.call_soon_threadsafe(
-            self.requests.put_nowait, (operation, args, kwargs, result)
-        )
+        self.loop.call_soon_threadsafe(self.requests.put_nowait, (operation, args, kwargs, result))
         try:
             return result.result(timeout=TOOL_TIMEOUT_SECONDS)
         except FutureTimeout as exc:
@@ -160,7 +162,9 @@ class JobBoardDemo:
     @staticmethod
     def _atomic_json(path: Path, value: Any) -> None:
         temporary = path.with_suffix(path.suffix + ".tmp")
-        temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temporary.write_text(
+            json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
         temporary.replace(path)
 
     def state(self) -> dict[str, Any]:

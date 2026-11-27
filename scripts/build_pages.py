@@ -6,7 +6,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 GUI_HTML = ROOT / "job_board_mcp" / "data" / "gui.html"
 GUI_DEMO = ROOT / "job_board_mcp" / "data" / "gui-demo.json"

@@ -6,6 +6,21 @@ The repository's portable prompt removes the original spreadsheet URL. An exact 
 
 An automation export is a record of instructions and schedule, not an export of the service's execution environment, browser sessions, connector credentials or run history. This project neither moves nor changes the existing scheduled task.
 
+`config/monitor-export.json` is a sanitized, portable metadata example; it is distinct from a private, exact export under `.local/`. Its fields describe the exported task:
+
+| Field | Meaning |
+| --- | --- |
+| `format`, `version` | Identify the metadata format and its schema version |
+| `exported_at` | Date the metadata snapshot was created |
+| `title` | Human-readable task name |
+| `schedule` | iCalendar event/recurrence text from the source schedule |
+| `timezone` | Timezone associated with that schedule |
+| `enabled_at_export` | Whether the task was enabled when the snapshot was taken |
+| `prompt_file`, `profile_file` | Paths to the portable prompt and example profile |
+| `notes` | Caveats recorded with the snapshot |
+
+These values are descriptive only: the project does not parse the schedule, create or enable a task, or change the original automation. Keep private prompts, workbook identifiers/URLs, credentials, and live application data out of the tracked metadata file; store any exact private export under ignored `.local/`.
+
 ## 2. Configure search sources and preferences
 
 The server reads these environment variables:

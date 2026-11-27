@@ -1,4 +1,5 @@
 """Explicit local-only migration; never reads or edits Google Sheets remotely."""
+
 import argparse
 import json
 import os
@@ -16,7 +17,7 @@ def main():
     if args.profile:
         os.environ["JOB_MONITOR_PROFILE"] = args.profile
     result = JobStore(args.db).import_csv(args.file, args.view)
-    print(json.dumps(result,indent=2))
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":

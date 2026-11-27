@@ -62,3 +62,7 @@ The server is the policy/data boundary. It performs source access, persistence, 
 Neither is a scheduler. An external scheduler may invoke a deterministic CLI workflow or an LLM host may orchestrate the returned monitor prompt. The three-day discovery window and recheck queue remain useful outside ChatGPT, but must be run by an actual host/job runner.
 
 The server has no application-submission capability. GET-only network access is deliberate. A candidate remains responsible for evaluating a role and applying through the employer's normal channel.
+
+## Repository validation
+
+The GitHub Actions quality and security workflow is development-time infrastructure, separate from the runtime flow above. Its checks and vulnerability issue/remediation process are documented in [Security and privacy](security.md#vulnerability-detection-and-remediation).

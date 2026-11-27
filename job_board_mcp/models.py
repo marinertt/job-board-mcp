@@ -1,5 +1,7 @@
 """Input models deliberately exclude user-owned application fields."""
+
 from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 

@@ -34,7 +34,6 @@ from .sources import (
 from .store import JobStore
 from .verification import verify_posting
 
-
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 LOCAL_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
 NETWORK_READ = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
@@ -51,6 +50,7 @@ def _csv(rows: list[dict], headers: list[str] | tuple[str, ...]) -> str:
     Prefix risky text with an apostrophe; machine consumers wanting verbatim data
     should read the JSON audit resource/filter tool instead.
     """
+
     def safe_cell(value: object) -> object:
         if isinstance(value, str):
             stripped = value.lstrip()
@@ -80,10 +80,7 @@ def _create_server(
     advertised_sources = []
     for source in sources:
         advertised = dict(source)
-        if (
-            source.get("enabled") is not False
-            and source_adapter_name(source) in SUPPORTED_ADAPTERS
-        ):
+        if source.get("enabled") is not False and source_adapter_name(source) in SUPPORTED_ADAPTERS:
             advertised["tool_name"] = source_tool_name(source)
         advertised_sources.append(advertised)
     catalog = {str(source["id"]): source for source in advertised_sources}
@@ -101,9 +98,7 @@ def _create_server(
         stateless_http=True,
     )
 
-    async def search_and_audit(
-        source: dict, query: str, location: str, search_stream: str
-    ) -> dict:
+    async def search_and_audit(source: dict, query: str, location: str, search_stream: str) -> dict:
         source_id = str(source["id"])
         hits = await search_source(source, query=query, location=location)
         audit = store.upsert_hits(hits, search_stream=search_stream)
@@ -278,8 +273,7 @@ def _create_server(
             + "\n\nUse jobboards://catalog for configured source details if they are "
             "needed. Do not claim any search, check, export, or write succeeded unless "
             "its actual result confirms success. The server does not schedule runs or "
-            "supply an LLM/search-provider account.\n\n"
-            + prompt
+            "supply an LLM/search-provider account.\n\n" + prompt
         )
 
     @server.prompt()
@@ -321,10 +315,7 @@ def _create_server(
         "export_jobs",
     }
     for source in sources:
-        if (
-            source.get("enabled") is False
-            or source_adapter_name(source) not in SUPPORTED_ADAPTERS
-        ):
+        if source.get("enabled") is False or source_adapter_name(source) not in SUPPORTED_ADAPTERS:
             continue
         tool_name = source_tool_name(source)
         if tool_name in reserved_tool_names:

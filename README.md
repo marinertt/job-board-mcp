@@ -41,6 +41,26 @@ python -m pip install -e .
 python -m unittest discover -s tests -v
 ```
 
+## Free quality and security checks
+
+Install the optional open-source check tools and run the same checks used by
+GitHub Actions:
+
+```bash
+python -m pip install -e ".[quality]"
+ruff check .
+ruff format --check .
+bandit --quiet --recursive job_board_mcp
+pip-audit --local --skip-editable
+```
+
+Use `ruff format .` to apply formatting, then rerun the checks. The
+`Free quality and security checks` workflow runs on pushes, pull requests,
+weekly, and on demand. It uses public GitHub Actions runners and open-source
+tools only; no paid scanning service, account, or API key is required.
+Findings are reviewed and remediated through normal code changes, not
+automatically upgraded; see the [vulnerability remediation policy](docs/security.md#vulnerability-detection-and-remediation).
+
 `MCPServer` owns the configured FastMCP instance. An owning application can
 embed that instance or start its transport programmatically:
 
@@ -102,6 +122,16 @@ does not bypass availability or promotion policy. Live source searches require
 an explicitly enabled and configured Greenhouse/Lever board. The GUI does not
 edit spreadsheets or submit applications.
 
+The **Profiles** section stores multiple monitor profiles. **Add a profile**
+copies the active profile and creates a matching results tab beside **Raw
+Search Hits**; selecting a profile tab loads its settings in the left panel and
+shows its title and location criteria above the results. **Resources** groups
+job-board setup and the MCP resource reader in the left panel. The main panel
+keeps **search results** and **How it works** as its only top-level tabs.
+**Search this result tab** and **Search a job board** are matching expandable
+controls; the demo-fixture button sits in the results header instead of a
+separate card.
+
 ### Add the demo to the SPARKTACUS site
 
 The existing company site is `marinertt.github.io`; the workbench belongs at
@@ -113,11 +143,13 @@ python scripts/build_pages.py --output /path/to/marinertt.github.io/job-monitor
 ```
 
 Then run the site checks and publish changes from the website repository. The
-static page labels client/server actions as simulated: GitHub Pages cannot run
-the Python process or MCP stdio connection, so searches, availability checks,
-promotions, and workbook writes are disabled. Configuration and synthetic
-`.invalid` sample rows stay in each visitor's browser storage. Use the local
-GUI above for actual MCP operations.
+static page starts with fictional sample listings across the result tabs.
+Search and filtering run against those bundled examples in the browser; the
+page labels client/server actions as simulated and never contacts a job source.
+GitHub Pages cannot run the Python process or MCP stdio connection, so live
+searches, availability checks, promotions, and workbook writes are disabled.
+Configuration and synthetic `.invalid` sample rows stay in each visitor's
+browser storage. Use the local GUI above for actual MCP operations.
 
 ## Connect an MCP host
 
@@ -139,7 +171,7 @@ authenticated deployment design.
 - Use only the regions and location rules defined by the active profile; keep career-transition scope configurable.
 - Keep unknown pay, authorization, clearance, travel, scheduling, and other personal constraints explicit rather than inventing favorable answers.
 
-The portable monitor instructions are in `prompts/monitor.md`; the MCP `run_job_check` prompt includes the active profile so its tabs, regions, search scope, and constraints can be reconfigured without editing the instructions. Source-specific details remain in the configured source catalog. A private exact automation export, if included in the delivered bundle, lives in ignored `.local/` and must not be published. This export does not change or cancel the original monitor.
+The portable monitor instructions are in `prompts/monitor.md`; the MCP `run_job_check` prompt includes the active profile so its tabs, regions, search scope, and constraints can be reconfigured without editing the instructions. Source-specific details remain in the configured source catalog. `config/monitor-export.json` is sanitized schedule metadata, not an executable scheduler. Keep any exact private automation export in ignored `.local/` and out of published bundles; it does not change or cancel the original monitor. See [Configure and migrate](docs/migration.md) for the export fields and privacy boundaries.
 
 ## What is—and is not—included
 
